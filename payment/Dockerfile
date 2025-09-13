@@ -40,6 +40,6 @@ COPY --from=builder /install /usr/local
 # Copy source code
 COPY --from=builder /opt/server /opt/server
 
-USER roboshop
+# USER roboshop
 
 CMD ["uwsgi", "--ini", "payment.ini"]
