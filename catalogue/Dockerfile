@@ -13,4 +13,4 @@ ENV MONGO="true"
  WORKDIR /opt/server
 USER roboshop
 COPY --from=builder /opt/server /opt/server/
-CMD ["node", "server.js"]
+CMD ["node", "server.js"] 
