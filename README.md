@@ -147,61 +147,211 @@ If you push the image again:
 OUTPUT:
 ---------
 FROM node:20(1st intrscution) ----> pull ----> from this it will create a container(intermediate contnaer) ---> on top of this it will run second command (WORKDIR /opt/server/) -----> from this again it creates the image (c10b18d0862b) ----> from this image again it run the container(63f71edeecde) ------> same process for remaing 
+# Docker Best Practices
 
-docker best practices:
-==========================
-minimum and offical images
-multi stage builds
-optimising layers and combining RUN commands
-non root containers
-use customized networks
-implementing volumes
-COPY over ADD
-docker igonre not load everything into docker
-impelementing health cheks
-limiting resources
-getting secreat from secreat manager
-implementing volumes
+- Use **minimal and official images**.
+- Use **multi-stage builds** to reduce image size.
+- Optimize Docker layers by combining `RUN` commands wherever possible.
+- Run containers as a **non-root user**.
+- Use **custom bridge networks** for container communication.
+- Use **Docker volumes** for stateful applications.
+- Prefer `COPY` over `ADD` unless additional `ADD` features are required.
+- Use a `.dockerignore` file to exclude unnecessary files from the build context.
+- Implement **health checks** to monitor container health.
+- Limit CPU and memory resources for containers.
+- Store sensitive information (passwords, API keys, etc.) in a **Secrets Manager** instead of hardcoding them.
+- Use persistent volumes for databases and other stateful services.
 
-cd catalogue/
-docker build -t lakshmi1092//catalogue:v1
+---
+
+## Build and Push Catalogue Image
+
+```bash
+cd catalogue
+```
+
+```bash
+docker build -t lakshmi1092/catalogue:v1 .
+```
+
+```bash
 docker login -u lakshmi1092
+```
+
+```bash
 docker push lakshmi1092/catalogue:v1
+```
+
+```bash
 docker compose up -d
+```
+
+Verify:
+
+```bash
 docker ps
-docker images
+```
 
-for i in cart catalogue user ; do cd $i; docker build -t lakshmi1092//$i:v1 . ; docker push lakshmi/$i:v1 ;cd ..;   done
+```bash
 docker images
+```
+
+---
+
+## Build and Push Multiple Images
+
+```bash
+for i in cart catalogue user
+do
+    cd "$i"
+    docker build -t lakshmi1092/$i:v1 .
+    docker push lakshmi1092/$i:v1
+    cd ..
+done
+```
+
+Verify:
+
+```bash
+docker images
+```
+
+Recreate the containers:
+
+```bash
 docker compose up -d
+```
+
+Restart the frontend:
+
+```bash
 docker restart frontend
+```
 
+---
 
-source code ---> complie ----> bytecode(intermediate language).
-for develping this source code we need jdk
-JDK ---> java development kit
-jdk ---> no need of developement env(runs bytecode)
-in java we did everything using maven
+# Java Build Process
 
-Docker Architecutre:
-===================
-client ---> docker CLI where we can run our docker commands
-host ----> where docker is running, docker deamon(continousy running)
-repos ---> local and central repo
+```text
+Source Code
+      ↓
+Compile
+      ↓
+Bytecode (.class files)
+      ↓
+Run the Application
+```
 
-what happen when we run 
+### JDK (Java Development Kit)
+
+- Used to develop Java applications.
+- Contains the Java compiler (`javac`) and other development tools.
+- Required to compile **source code** into **bytecode**.
+
+### JRE (Java Runtime Environment)
+
+- Used to run Java applications.
+- Executes the compiled bytecode.
+- Does not contain development tools like the Java compiler.
+
+### Maven
+
+- Maven is the build tool used in Java projects.
+- It manages dependencies.
+- Compiles the source code.
+- Runs tests.
+- Packages the application into a **JAR** or **WAR** file.
+  
+
+# Docker Architecture
+
+Docker architecture consists of three main components:
+
+- **Client**
+- **Docker Host**
+- **Registry (Repository)**
+
+---
+
+## Client
+
+- The client is the **Docker CLI (Command Line Interface)**.
+- We use the Docker CLI to execute Docker commands such as `docker build`, `docker run`, `docker ps`, etc.
+
+---
+
+## Docker Host
+
+- The Docker Host is the machine where Docker is installed.
+- It runs the **Docker Daemon (`dockerd`)**, which continuously listens for Docker commands.
+- The Docker Daemon is responsible for:
+  - Building images.
+  - Creating containers.
+  - Managing Docker networks.
+  - Managing Docker volumes.
+
+---
+
+## Registry (Repository)
+
+- Stores Docker images.
+- Images can be stored in:
+  - **Local Repository** (available on the Docker Host).
+  - **Central Repository** (Docker Hub or a private registry).
+
+---
+
+# What Happens When We Run?
+
+```bash
 docker run nginx
-----------------
-1. 1st it checks the image is in local or not
-2. if exstis then it will create the conatiner
-3. if not exsit then it wil pull from registry and  create the conatiner and send the o/p to client
-4. they are docker volumes and networkig we can configure 
+```
 
-Disadvanatges
-==============
-auto scaling: There is no deafult auto scaling methods
-load blancing: no load blancing components to blance the traffic b/w the containers
-reliablity: If container crashes it will not automatically restart(no self healing)
-what if docker host crash: all conatiner are goes down
-what about storage: if docker host crashes we loose data also beacuse docker is manging volumes on the same host
-networking is in bridge mode, if you have multiple docker hosts bridge host will not work
+1. Docker checks whether the **nginx image** is available locally.
+2. If the image exists, Docker creates and starts the container.
+3. If the image does not exist, Docker pulls it from the Docker registry (Docker Hub by default), creates the container, and displays the output on the client.
+4. During container creation, Docker also configures networking and volumes (if specified).
+
+---
+
+# Disadvantages of Docker
+
+## Auto Scaling
+
+- Docker does not provide automatic auto-scaling by default.
+- Containers are not automatically increased or decreased based on traffic.
+
+---
+
+## Load Balancing
+
+- Docker does not include a built-in load balancer.
+- Traffic is not automatically distributed across multiple containers.
+
+---
+
+## Reliability (Self-Healing)
+
+- If a container crashes, Docker does not automatically recreate or restart it (unless a restart policy is configured).
+- Docker does not provide self-healing by default.
+
+---
+
+## Docker Host Failure
+
+- If the Docker Host crashes, all the containers running on that host become unavailable.
+
+---
+
+## Storage
+
+- By default, Docker-managed volumes are stored on the same Docker Host.
+- If the host machine fails and there is no external or backup storage, the application data may also be lost.
+
+---
+
+## Networking
+
+- Docker uses the **bridge network** by default.
+- The bridge network works only within a single Docker Host.
+- It cannot provide communication between containers running on different Docker Hosts.
