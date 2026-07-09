@@ -1,37 +1,153 @@
+# Multi-Stage Build
 
-  
+Now we will decrease the image size.
 
-multi stage build:
-=================
-now we will decraese the size  of memory
-multi stage builds introduce multiple stages in your Dockerile each with specfic purpose
+- Multi-stage builds introduce **multiple stages** in a single Dockerfile. Each stage has a specific purpose.
+- We use **one Dockerfile**, but it contains multiple stages.
+- One stage is used as the **builder** to build the application and install the required dependencies.
+- Another stage is used as the **final image** to run the application.
+- We can copy only the required files from the builder stage to the final stage.
+- Build tools and unnecessary files remain in the builder stage and are not copied to the final image.
+- This reduces the image size by removing unnecessary installations and build files.
 
-multi stage builds are keeping multiple docker files in a single docker file,
-One docker file use it as builder and another docker flle we can use it as final image 
-we can copy what you want from builder to final image.
-this reduces the memory un nesaray instalation
+**Flow:**
 
+```text
+Builder Stage
+    ↓
+Build application + Install dependencies
+    ↓
+Copy only required files
+    ↓
+Final Image
+    ↓
+Small, clean and optimized image
+```
+
+# Build and Deploy the Catalogue Service
+
+Go to the Catalogue project directory:
+
+```bash
 cd catalogue
-docker build -t lakshmi1092//catalogue:v1 .
-docker images
-cd ..
-docker compose up -d
+```
 
-optimised docker layers:
-=========================
-cd users
-DOCKER_BUILDKIT=0 docker build -t lakshmi1092/user:v1 --no-cache .
+Build the Docker image:
+
+```bash
+docker build -t lakshmi1092/catalogue:v1 .
+```
+
+Verify the image:
+
+```bash
+docker images
+```
+
+Go back to the project root directory:
+
+```bash
+cd ..
+```
+
+Start (or recreate) the services using Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+> **Note:** After rebuilding the image, run `docker compose up -d` so Docker Compose recreates the container with the latest image.
+
+
+# Optimized Docker Layers
+
+Go to the User project:
+
+```bash
+cd user
+```
+
+Build the image without using the cache:
+
+```bash
+DOCKER_BUILDKIT=0 docker build --no-cache -t lakshmi1092/user:v1 .
+```
+
+> `DOCKER_BUILDKIT=0` shows the traditional Docker build output with intermediate containers.
+
+---
+
+## Output Flow
+
+```text
+FROM node:20          (1st instruction)
+        ↓
+Pull the base image
+        ↓
+Create an intermediate container
+        ↓
+Execute the instruction
+        ↓
+Create Image Layer 1
+
+WORKDIR /opt/server   (2nd instruction)
+        ↓
+Create an intermediate container from Image Layer 1
+        ↓
+Execute the instruction
+        ↓
+Create Image Layer 2
+
+COPY package.json .   (3rd instruction)
+        ↓
+Create an intermediate container from Image Layer 2
+        ↓
+Execute the instruction
+        ↓
+Create Image Layer 3
+
+RUN npm install       (4th instruction)
+        ↓
+Create an intermediate container from Image Layer 3
+        ↓
+Execute the instruction
+        ↓
+Create Image Layer 4
+
+...same process continues for the remaining instructions...
+
+        ↓
+Final Docker Image
+```
+
+### Note
+
+- Every Dockerfile instruction creates a **new image layer**.
+- Docker creates a temporary (**intermediate**) container to execute each instruction.
+- After executing the instruction, Docker saves the changes as a new image layer.
+- This process continues until the final image is created.
+- After the build is completed, all intermediate containers are automatically deleted.
+
+---
+
+## Push the Image
+
+```bash
+docker push lakshmi1092/user:v1
+```
+
+If you push the image again:
+
+- Docker does **not** push the entire image.
+- It checks all the image layers.
+- Only the **new or modified layers** are pushed to Docker Hub.
+- Existing layers are skipped, making the push faster.
+  
 
 OUTPUT:
 ---------
-FROM node:20(1st intrscution) ----> pull ----> from this it will create a container(intermediate contnaer) ---> on top of this it will run second command (WORKDIR /opt/server/) -----> from this again it creates the image (c10b18d0862b) ----> from this image again it run the container(63f71edeecde) ------> same process for remaing .....
+FROM node:20(1st intrscution) ----> pull ----> from this it will create a container(intermediate contnaer) ---> on top of this it will run second command (WORKDIR /opt/server/) -----> from this again it creates the image (c10b18d0862b) ----> from this image again it run the container(63f71edeecde) ------> same process for remaing 
 
-If you trying push image another time it will not push the entrie code beacuse it conatin all layers.
-docker push -d lakshmi1092//user:v1
-
-all intermediate layer are deleted and it gives final moutput
-
-------------------------------------
 docker best practices:
 ==========================
 minimum and offical images
